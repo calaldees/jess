@@ -1,4 +1,14 @@
+// Utils -----------------------------------------------------------------------
+
+// https://stackoverflow.com/a/1431113/3356840
+function replaceAt(string, index, replacement) {
+    return string.substr(0, index) + replacement + string.substr(index + replacement.length);
+}
+
+
 // State -----------------------------------------------------------------------
+
+const CHAR_ACTIVE = '◎';
 
 let state = {
     layers: [
@@ -11,6 +21,15 @@ let state = {
         '□■□■□■□■' +
         '■□■□■□■□'
         ,
+        '        ' +
+        '        ' +
+        '        ' +
+        '        ' +
+        '        ' +
+        '        ' +
+        '        ' +
+        '        '
+        ,
         '♖♘♗♕♔♗♘♖' +
         '♙♙♙♙♙♙♙♙' +
         '        ' +
@@ -20,14 +39,6 @@ let state = {
         '♟♟♟♟♟♟♟♟' +
         '♜♞♝♛♚♝♞♜'
         ,
-        '        ' +
-        '        ' +
-        '        ' +
-        '        ' +
-        '        ' +
-        '        ' +
-        '        ' +
-        '        '
     ],
     meta: {
         width: 8,
@@ -40,8 +51,12 @@ let state = {
 // Canvas ----------------------------------------------------------------------
 const canvas = document.getElementById("canvas");
 const ctx = canvas.getContext('2d', { alpha: false });
+
+// Resize (could be put in function later)
 canvas.width = window.innerWidth;
 canvas.height = window.innerHeight;
+const tile_width = canvas.width / state.meta.width;
+const tile_height = canvas.height / state.meta.height;
 
 
 // Websocket -------------------------------------------------------------------
@@ -61,24 +76,28 @@ socket.addEventListener('message', function (event) {
     state = JSON.parse(event.data);
     drawDisplay();
 });
-
+function sendState() {
+    socket.send(JSON.stringify(state));
+}
 
 // Input -----------------------------------------------------------------------
 
 canvas.addEventListener('mousedown', (event) => {
-    const rect = canvas.getBoundingClientRect()
-    const x = event.clientX - rect.left;
-    const y = event.clientY - rect.top;
+    let [x, y] = [
+        event.clientX - canvas.getBoundingClientRect().left,
+        event.clientY - canvas.getBoundingClientRect().top,
+    ];
+    x = Math.floor(x/tile_width);
+    y = Math.floor(y/tile_height);
     console.log("x: " + x + " y: " + y);
-})
+    state.layers[1] = replaceAt(state.layers[1], x + (y * state.meta.width), CHAR_ACTIVE);
+    sendState();
+});
 
 
 // Game Logic ------------------------------------------------------------------
 
 function drawDisplay() {
-    const tile_width = canvas.width / state.meta.width;
-    const tile_height = canvas.height / state.meta.height;
-
     ctx.font = `${Math.min(tile_width, tile_height)}px serif`;
     ctx.textBaseline = 'middle';
     ctx.textAlign = 'center';
@@ -99,7 +118,7 @@ function drawDisplay() {
         }
         else {
             ctx.fillStyle = 'orange';
-            ctx.fillText(char, x + (tile_width/2), y + (tile_height/2), tile_width);
+            ctx.fillText(char, x + (tile_width/2), y + (tile_height/2));
         }
     }
 
