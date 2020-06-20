@@ -5,13 +5,6 @@ function strReplaceAt(string, index, replacement) {
     return string.substr(0, index) + replacement + string.substr(index + replacement.length);
 }
 
-function* strZip(aa, bb) {
-    console.assert(aa.length == bb.length, 'string length must match');
-    for (let i=0 ; i < aa.length ; i++) {
-        yield [aa.charAt(i), bb.charAt(i)];
-    }
-}
-
 function* strDiffIndexs(aa, bb) {
     console.assert(aa.length == bb.length, 'string length must match');
     for (let i=0 ; i < aa.length ; i++) {
@@ -46,10 +39,23 @@ const CHESS_PIECE_COLOR_WHITE = '#eeee88';
 const CHESS_PIECE_COLOR_BLACK = '#46468c';
 const CHESS_PIECES_WHITE = '♖♘♗♕♔♙';
 const CHESS_PIECES_BLACK = '♜♞♝♛♚♟';
-const CHESS_PIECE_COLOR_INVERSION_LOOKUP = new Map(strZip(
-    CHESS_PIECES_WHITE + CHESS_PIECES_BLACK,
-    CHESS_PIECES_BLACK + CHESS_PIECES_WHITE,
-));
+const CHESS_PIECES = CHESS_PIECES_WHITE + CHESS_PIECES_BLACK;
+
+function chess_piece_invert(char) {
+//    const CHESS_PIECE_UNICODE = 0x2654;
+//    char_int = char.codePointAt(0) - CHESS_PIECE_UNICODE;
+//    console.assert(char_int >=0 && char_int < 12, 'not a chess unicode character');
+//    return String.fromCharCode(
+//        ((char_int + 6) % 12) + CHESS_PIECE_UNICODE
+//    );
+    return CHESS_PIECES.charAt(
+        (CHESS_PIECES.indexOf(char) + CHESS_PIECES_WHITE.length) % CHESS_PIECES.length
+    );
+}
+//const CHESS_PIECE_COLOR_INVERSION_LOOKUP = new Map(strZip(
+//    CHESS_PIECES_WHITE + CHESS_PIECES_BLACK,
+//    CHESS_PIECES_BLACK + CHESS_PIECES_WHITE,
+//));
 
 
 // State -----------------------------------------------------------------------
@@ -133,25 +139,28 @@ function socketConnect() {
     });
     socket.addEventListener('message', function (event) {
         console.debug('socket message');
-        receiveState(JSON.parse(event.data));
+        receiveMessage(JSON.parse(event.data));
     });
 }
 
-function receiveState(_state) {
+function receiveMessage(_state) {
+    // we can receive different types of message
+    if (_state.message == 'request_state') {
+        sendMessage(state);
+    }
     state = _state;
     drawDisplay();
 }
 
-function sendState(_state) {
-    if (socket && socket.readyState == 1) {
-        socket.send(JSON.stringify(_state));
-        // this will trigger socker.message -> receiveState -> drawDisplay
-    }
-    else {
+function sendMessage(_state) {
+    if (!socket || socket.readyState != 1) {
         console.warn('Not connected to websocket');
         socketConnect();  // attempt reconnect
-        receiveState(_state);  // manually push state
+        receiveMessage(_state);  // manually push state locally
+        return;
     }
+    socket.send(JSON.stringify(_state));
+    // this will trigger socker.message -> receiveMessage -> drawDisplay
 }
 
 
@@ -164,7 +173,7 @@ canvas.addEventListener('mousedown', (event) => {
     y = Math.floor(y/tile_height);
     //console.log("x: " + x + " y: " + y);
     updateState(x, y);
-    sendState(state);
+    sendMessage(state);
 });
 
 
@@ -195,7 +204,7 @@ function drawTile(x, y, char) {
     y = y * tile_height;
     const x_center = x + (tile_width/2);
     const y_center = y + (tile_height/2);
-    ctx.lineWidth = tile_width / 64;
+    ctx.lineWidth = tile_height / 64;
 
     if (char == BLANK_CHAR) {
     }
@@ -223,7 +232,8 @@ function drawTile(x, y, char) {
         }
         if (CHESS_PIECES_WHITE.indexOf(char) >= 0) {
             ctx.fillStyle = CHESS_PIECE_COLOR_WHITE;
-            char = CHESS_PIECE_COLOR_INVERSION_LOOKUP.get(char);
+            //char = CHESS_PIECE_COLOR_INVERSION_LOOKUP.get(char);
+            char = chess_piece_invert(char);
         }
 
         ctx.fillText(char, x_center, y_center);
