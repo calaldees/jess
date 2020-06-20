@@ -46,7 +46,10 @@ function countChars(string, chars) {
     return count;
 }
 
+
 // Constants -------------------------------------------------------------------
+
+const BLANK_CHAR = ' ';
 
 const ACTIVE_CHAR = '◎';
 const ACTIVE_CHAR_COLOR = '#db587b';
@@ -103,8 +106,8 @@ let state = {
 }
 
 
-
 // Canvas ----------------------------------------------------------------------
+
 const canvas = document.getElementById("canvas");
 const ctx = canvas.getContext('2d', { alpha: false });
 
@@ -117,6 +120,7 @@ ctx.font = `${Math.min(tile_width, tile_height)}px serif`;
 
 
 // Websocket -------------------------------------------------------------------
+
 window.addEventListener('hashchange', ()=>{window.location.reload()});
 const channel = window.location.hash.replace('#','');
 const ws_url = `ws://${window.location.hostname}:9800/${channel}.ws`;
@@ -137,6 +141,7 @@ function sendState() {
     socket.send(JSON.stringify(state));
 }
 
+
 // Input -----------------------------------------------------------------------
 
 canvas.addEventListener('mousedown', (event) => {
@@ -155,7 +160,20 @@ canvas.addEventListener('mousedown', (event) => {
 // Game Logic ------------------------------------------------------------------
 
 function updateState(x, y) {
-    state.layers[1] = replaceAt(state.layers[1], x + (y * state.meta.width), ACTIVE_CHAR);
+    const i2 = x + (y * state.meta.width);
+    const blank_layer = BLANK_CHAR.repeat(state.meta.width * state.meta.height);
+    const active_layer = state.layers[1];
+    const active_count = countChars(active_layer, ACTIVE_CHAR);
+    if (active_count == 0) {
+        state.layers[1] = replaceAt(active_layer, i2, ACTIVE_CHAR);
+    }
+    if (active_count == 1) {
+        const i1 = [...diffStrIndexs(blank_layer, active_layer)][0];
+        const char = state.layers[2].charAt(i1);
+        state.layers[2] = replaceAt(state.layers[2], i1, BLANK_CHAR);
+        state.layers[2] = replaceAt(state.layers[2], i2, char);
+        state.layers[1] = blank_layer;
+    }
 }
 
 
