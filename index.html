@@ -1,6 +1,6 @@
 <html>
 	<head>
-		<title>Jess</title>
+		<title>J(avascript Ch)ess</title>
 		<meta charset="utf-8" />
 		<style>
 			html, body {
@@ -8,21 +8,44 @@
 				height: 100%;
 				margin: 0;
 				border: 0;
-				overflow: hidden; /*  Disable scrollbars */
-				display: block;  /* No floating content on sides */
+				overflow: hidden;
+
+				display: flex;
+				flex-direction: row;
+				flex-wrap: nowrap;
+				align-items: stretch;
 			}
-			canvas {
-				position:absolute;
-				left: 0px;
-				top: 0px;
+			#canvas {
+				flex-grow: 1;
+			}
+			#chat {
+				/* flex child */
+				flex-grow: 1;
+				flex-basis: 25%;
+				/* flex parent */
+				display: flex;
+				flex-direction: column;
+				flex-wrap: nowrap;
+				align-items: stretch;
+			}
+			#chat textarea {
+				flex-grow: 1;
+			}
+			#chat input {
+				flex-grow: 0;
 			}
 		</style>
 	</head>
 	<body>
-		<h1>Jess</h1>
+		<!--
+		<h1>J(avascript Ch)ess</h1>
 		<p>Tiny Multiplayer Chess</p>
-
+		-->
 		<canvas id="canvas"></canvas>
+		<div id='chat'>
+			<textarea readonly></textarea>
+			<input type="text" name="message" value="" placeholder="Type your message" autofocus />
+		</div>
 
 		<script type="text/javascript" src="jess.js"></script>
 	</body>

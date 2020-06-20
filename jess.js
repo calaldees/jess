@@ -25,7 +25,14 @@ function strCountChars(string, chars) {
 }
 
 
+// https://stackoverflow.com/a/53389398/3356840
+function randomString(length=8) {
+    return ((Math.random()+3*Number.MIN_VALUE)/Math.PI).toString(36).slice(-length);
+}
+
+
 // Constants -------------------------------------------------------------------
+const CLIENT_ID = randomString();
 
 const BLANK_CHAR = ' ';
 
@@ -42,15 +49,15 @@ const CHESS_PIECES_BLACK = '♜♞♝♛♚♟';
 const CHESS_PIECES = CHESS_PIECES_WHITE + CHESS_PIECES_BLACK;
 
 function chess_piece_invert(char) {
+    return CHESS_PIECES.charAt(
+        (CHESS_PIECES.indexOf(char) + CHESS_PIECES_WHITE.length) % CHESS_PIECES.length
+    );
 //    const CHESS_PIECE_UNICODE = 0x2654;
 //    char_int = char.codePointAt(0) - CHESS_PIECE_UNICODE;
 //    console.assert(char_int >=0 && char_int < 12, 'not a chess unicode character');
 //    return String.fromCharCode(
 //        ((char_int + 6) % 12) + CHESS_PIECE_UNICODE
 //    );
-    return CHESS_PIECES.charAt(
-        (CHESS_PIECES.indexOf(char) + CHESS_PIECES_WHITE.length) % CHESS_PIECES.length
-    );
 }
 //const CHESS_PIECE_COLOR_INVERSION_LOOKUP = new Map(strZip(
 //    CHESS_PIECES_WHITE + CHESS_PIECES_BLACK,
@@ -105,64 +112,99 @@ const ctx = canvas.getContext('2d', { alpha: false });
 let tile_width;
 let tile_height;
 
-function resizeWindow() {
-    canvas.width = window.innerWidth;
-    canvas.height = window.innerHeight;
+function resizeCanvas() {
+    canvas.width = canvas.clientWidth;
+    canvas.height = canvas.clientHeight;
     tile_width = canvas.width / state.meta.width;
     tile_height = canvas.height / state.meta.height;
     ctx.font = `${Math.min(tile_width, tile_height)}px serif`;
     drawDisplay();
 }
-window.addEventListener('resize', resizeWindow);
+new ResizeObserver(resizeCanvas).observe(canvas);
 
 
 // Websocket -------------------------------------------------------------------
 
-window.addEventListener('hashchange', ()=>{window.location.reload()});
+// Channel name from url#hash or auto-generate
 const channel = window.location.hash.replace('#','');
+if (!channel) {window.location.hash = `#${randomString()}`;}
 const ws_url = `ws://${window.location.hostname}:9800/${channel}.ws`;
+window.addEventListener('hashchange', ()=>{window.location.reload()});
 
 let socket;
 function socketConnect() {
     if (socket) {
-        console.warn('socket already connected');
+        console.warn('socket already active');
         return;
     }
     console.log('socket create', ws_url);
     socket = new WebSocket(ws_url);
     socket.addEventListener('open', function (event) {
-        console.log('socket open');
+        onConnect();
     });
     socket.addEventListener('close', function (event) {
-        console.log('socket close');
         socket = undefined;
+        onDisconnect();
     });
     socket.addEventListener('message', function (event) {
-        console.debug('socket message');
-        receiveMessage(JSON.parse(event.data));
+        //console.debug('socket message', event.data);
+        onMessage(JSON.parse(event.data));
     });
 }
 
-function receiveMessage(_state) {
+function onConnect() {
+    console.log('socket open');
+    sendMessage({message_type: 'request_state', client_id: CLIENT_ID});
+}
+
+function onDisconnect() {
+    console.log('socket close');
+}
+
+function onMessage(msg) {
     // we can receive different types of message
-    if (_state.message == 'request_state') {
+    if (msg.message_type == 'request_state' && msg.client_id != CLIENT_ID) {
         sendMessage(state);
     }
-    state = _state;
-    drawDisplay();
+    else if (msg.message_type == 'message') {
+        appendChatMessage(msg.message);
+    }
+    else {
+        state = msg;
+        drawDisplay();
+    }
 }
 
 function sendMessage(_state) {
     if (!socket || socket.readyState != 1) {
         console.warn('Not connected to websocket');
         socketConnect();  // attempt reconnect
-        receiveMessage(_state);  // manually push state locally
+        onMessage(_state);  // manually push state locally
         return;
     }
     socket.send(JSON.stringify(_state));
-    // this will trigger socker.message -> receiveMessage -> drawDisplay
+    // this will trigger socket.message -> onMessage -> drawDisplay
 }
 
+
+// Chat Client -----------------------------------------------------------------
+
+const chat_textarea = document.getElementsByTagName('textarea')[0];
+const chat_input = document.getElementsByTagName('input')[0];
+function textEventKeyDown(event) {
+    if (event.keyCode==13) {
+        sendMessage({
+            message_type: 'message',
+            message: `name: ${chat_input.value}`,
+        });
+        chat_input.value = "";
+    }
+}
+chat_input.addEventListener('keydown', textEventKeyDown, true);
+function appendChatMessage(message) {
+    chat_textarea.value += `${message}\n`;
+    chat_textarea.scrollTop = chat_textarea.scrollHeight;
+}
 
 // Input -----------------------------------------------------------------------
 
@@ -171,7 +213,6 @@ canvas.addEventListener('mousedown', (event) => {
     let y = event.clientY - canvas.getBoundingClientRect().top;
     x = Math.floor(x/tile_width);
     y = Math.floor(y/tile_height);
-    //console.log("x: " + x + " y: " + y);
     updateState(x, y);
     sendMessage(state);
 });
@@ -232,7 +273,6 @@ function drawTile(x, y, char) {
         }
         if (CHESS_PIECES_WHITE.indexOf(char) >= 0) {
             ctx.fillStyle = CHESS_PIECE_COLOR_WHITE;
-            //char = CHESS_PIECE_COLOR_INVERSION_LOOKUP.get(char);
             char = chess_piece_invert(char);
         }
 
@@ -254,4 +294,3 @@ function drawDisplay() {
 // Main ------------------------------------------------------------------------
 
 socketConnect();
-resizeWindow();
