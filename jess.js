@@ -4,11 +4,38 @@
 function replaceAt(string, index, replacement) {
     return string.substr(0, index) + replacement + string.substr(index + replacement.length);
 }
+function all(iterable) {
+    for (let i of iterable) {
+        if (!i) {return false;}
+    }
+    return true;
+}
+function* zip(...iterables) {
+    const iterators = [...iterables].map(iterable => iterable[Symbol.iterator]());
+    while (true) {
+        const iterable_items = iterators.map(iterator => iterator.next());
+        if (all(iterable_items.map(i => i.done))) {break;}
+        yield iterable_items.map(i => i.value);
+    }
+}
+
+// Constants -------------------------------------------------------------------
+
+const CHAR_ACTIVE = '◎';
+
+const CHESS_BOARD_COLOR_WHITE = '#eeeeee';
+const CHESS_BOARD_COLOR_BLACK = '#666666';
+const CHESS_PIECE_COLOR_WHITE = '#eeee88';
+const CHESS_PIECE_COLOR_BLACK = '#46468c';
+const CHESS_PIECES_WHITE = '♖♘♗♕♔♙';
+const CHESS_PIECES_BLACK = '♜♞♝♛♚♟';
+const CHESS_PIECE_COLOR_INVERSION_LOOKUP = new Map(zip(
+    CHESS_PIECES_WHITE + CHESS_PIECES_BLACK,
+    CHESS_PIECES_BLACK + CHESS_PIECES_WHITE,
+));
 
 
 // State -----------------------------------------------------------------------
-
-const CHAR_ACTIVE = '◎';
 
 let state = {
     layers: [
@@ -30,14 +57,14 @@ let state = {
         '        ' +
         '        '
         ,
-        '♖♘♗♕♔♗♘♖' +
-        '♙♙♙♙♙♙♙♙' +
-        '        ' +
-        '        ' +
-        '        ' +
-        '        ' +
+        '♜♞♝♛♚♝♞♜' +
         '♟♟♟♟♟♟♟♟' +
-        '♜♞♝♛♚♝♞♜'
+        '        ' +
+        '        ' +
+        '        ' +
+        '        ' +
+        '♙♙♙♙♙♙♙♙' +
+        '♖♘♗♕♔♗♘♖'
         ,
     ],
     meta: {
@@ -57,6 +84,7 @@ canvas.width = window.innerWidth;
 canvas.height = window.innerHeight;
 const tile_width = canvas.width / state.meta.width;
 const tile_height = canvas.height / state.meta.height;
+ctx.font = `${Math.min(tile_width, tile_height)}px serif`;
 
 
 // Websocket -------------------------------------------------------------------
@@ -97,31 +125,43 @@ canvas.addEventListener('mousedown', (event) => {
 
 // Game Logic ------------------------------------------------------------------
 
-function drawDisplay() {
-    ctx.font = `${Math.min(tile_width, tile_height)}px serif`;
-    ctx.textBaseline = 'middle';
-    ctx.textAlign = 'center';
-
-    function drawTile(x, y, char) {
-        x = x * tile_width;
-        y = y * tile_height;
-        if (char == '□') {
-            ctx.fillStyle = 'white';
-            ctx.fillRect(x, y, tile_width, tile_height);
-        }
-        else if (char == '■') {
-            ctx.fillStyle = 'black';
-            ctx.fillRect(x, y, tile_width, tile_height);
-        }
-        else if (char == ' ') {
-            // nothing
-        }
-        else {
-            ctx.fillStyle = 'orange';
-            ctx.fillText(char, x + (tile_width/2), y + (tile_height/2));
-        }
+function drawTile(x, y, char) {
+    x = x * tile_width;
+    y = y * tile_height;
+    if (char == '□') {
+        ctx.fillStyle = CHESS_BOARD_COLOR_WHITE;
+        ctx.fillRect(x, y, tile_width, tile_height);
     }
+    else if (char == '■') {
+        ctx.fillStyle = CHESS_BOARD_COLOR_BLACK;
+        ctx.fillRect(x, y, tile_width, tile_height);
+    }
+    else if (char == ' ') {
+        // nothing
+    }
+    else {
+        ctx.textBaseline = 'middle';
+        ctx.textAlign = 'center';
 
+        if (CHESS_PIECES_BLACK.indexOf(char) >= 0) {
+            ctx.fillStyle = CHESS_PIECE_COLOR_BLACK;
+        }
+        if (CHESS_PIECES_WHITE.indexOf(char) >= 0) {
+            ctx.fillStyle = CHESS_PIECE_COLOR_WHITE;
+            char = CHESS_PIECE_COLOR_INVERSION_LOOKUP.get(char);
+        }
+
+        const xc = x + (tile_width/2);
+        const yc = y + (tile_height/2);
+        ctx.fillText(char, xc, yc);
+
+        ctx.strokeStyle = 'black';
+        ctx.lineWidth = tile_width / 64;
+        ctx.strokeText(char, xc, yc);
+    }
+}
+
+function drawDisplay() {
     for (let layer of state.layers) {
         for (var index=0; index<layer.length; index++) {
             let [x, y] = [index % state.meta.height, Math.floor(index/state.meta.height)];
