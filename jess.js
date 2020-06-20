@@ -4,6 +4,7 @@
 function replaceAt(string, index, replacement) {
     return string.substr(0, index) + replacement + string.substr(index + replacement.length);
 }
+
 function all(iterable) {
     for (let i of iterable) {
         if (!i) {return false;}
@@ -17,6 +18,32 @@ function* zip(...iterables) {
         if (all(iterable_items.map(i => i.done))) {break;}
         yield iterable_items.map(i => i.value);
     }
+}
+function* enumerate(iterable) {
+    let count = 0;
+    for (let item of iterable) {
+        yield [count++, item];
+    }
+}
+
+// this
+
+function* diffStrIndexs(aa, bb) {
+    console.assert(aa.length == bb.length, 'string length must match for diffStr to work');
+    for (let i=0 ; i < aa.length ; i++) {
+        if (aa.charAt(i) != bb.charAt(i)) {
+            yield i;
+        }
+    }
+}
+function countChars(string, chars) {
+    let count = 0;
+    for (let i=0 ; i<string.length ; i++) {
+        if (chars.indexOf(string.charAt(i)) >= 0) {
+            count++;
+        }
+    }
+    return count;
 }
 
 // Constants -------------------------------------------------------------------
@@ -119,13 +146,20 @@ canvas.addEventListener('mousedown', (event) => {
     ];
     x = Math.floor(x/tile_width);
     y = Math.floor(y/tile_height);
-    console.log("x: " + x + " y: " + y);
-    state.layers[1] = replaceAt(state.layers[1], x + (y * state.meta.width), ACTIVE_CHAR);
+    //console.log("x: " + x + " y: " + y);
+    updateState(x, y);
     sendState();
 });
 
 
 // Game Logic ------------------------------------------------------------------
+
+function updateState(x, y) {
+    state.layers[1] = replaceAt(state.layers[1], x + (y * state.meta.width), ACTIVE_CHAR);
+}
+
+
+// Display/Rendering -----------------------------------------------------------
 
 function drawTile(x, y, char) {
     x = x * tile_width;
@@ -178,5 +212,8 @@ function drawDisplay() {
         }
     }
 }
+
+
+// Main ------------------------------------------------------------------------
 
 drawDisplay();
