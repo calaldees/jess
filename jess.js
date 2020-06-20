@@ -131,6 +131,7 @@ if (!channel) {window.location.hash = `#${randomString()}`;}
 const ws_url = `ws://${window.location.hostname}:9800/${channel}.ws`;
 window.addEventListener('hashchange', ()=>{window.location.reload()});
 
+const SOCKET_RECONNECT_INTERVAL_MS = 5000;
 let socket;
 function socketConnect() {
     if (socket) {
@@ -145,6 +146,7 @@ function socketConnect() {
     socket.addEventListener('close', function (event) {
         socket = undefined;
         onDisconnect();
+        setTimeout(socketConnect, SOCKET_RECONNECT_INTERVAL_MS);
     });
     socket.addEventListener('message', function (event) {
         //console.debug('socket message', event.data);
@@ -163,8 +165,10 @@ function onDisconnect() {
 
 function onMessage(msg) {
     // we can receive different types of message
-    if (msg.message_type == 'request_state' && msg.client_id != CLIENT_ID) {
-        sendMessage(state);
+    if (msg.message_type == 'request_state') {
+        if (msg.client_id != CLIENT_ID) {
+            sendMessage(state);
+        }
     }
     else if (msg.message_type == 'message') {
         appendChatMessage(msg.message);
