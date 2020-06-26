@@ -1,28 +1,20 @@
 // Utils -----------------------------------------------------------------------
 
-// https://stackoverflow.com/a/1431113/3356840
-function strReplaceAt(string, index, replacement) {
-    return string.substr(0, index) + replacement + string.substr(index + replacement.length);
+function index_to_coordinate(i, width, height) {
+    return [
+        i % width,
+        Math.floor(i/width) % height,
+        Math.floor(i/(width * height)),
+    ]
 }
-
-function* strDiffIndexs(aa, bb) {
-    console.assert(aa.length == bb.length, 'string length must match');
-    for (let i=0 ; i < aa.length ; i++) {
-        if (aa.charAt(i) != bb.charAt(i)) {
-            yield i;
-        }
-    }
-}
-
-function strCountChars(string, chars) {
-    let count = 0;
-    for (let i=0 ; i<string.length ; i++) {
-        if (chars.indexOf(string.charAt(i)) >= 0) {
-            count++;
-        }
-    }
-    return count;
-}
+console.assert(`${index_to_coordinate(0, 8, 8, 3)}` == '0,0,0', '0,0,0');
+console.assert(`${index_to_coordinate(7, 8, 8, 3)}` == '7,0,0', '7,0,0');
+console.assert(`${index_to_coordinate(8, 8, 8, 3)}` == '0,1,0', '0,1,0');
+console.assert(`${index_to_coordinate(64, 8, 8, 3)}` == '0,0,1', '0,0,1');
+console.assert(`${index_to_coordinate(73, 8, 8, 3)}` =='1,1,1', '1,1,1');
+console.assert(`${index_to_coordinate(146, 8, 8, 3)}` == '2,2,2', '2,2,2');
+console.assert(`${index_to_coordinate(46, 4, 8, 2)}` == '2,3,1', '2,3,1');
+console.assert(`${index_to_coordinate(63, 4, 8, 2)}` == '3,7,1', '1,7,3');
 
 
 // https://stackoverflow.com/a/53389398/3356840
@@ -68,7 +60,7 @@ function chess_piece_invert(char) {
 // State -----------------------------------------------------------------------
 
 let state = {
-    layers: [
+    tiles:
         '□■□■□■□■' +
         '■□■□■□■□' +
         '□■□■□■□■' +
@@ -76,8 +68,8 @@ let state = {
         '□■□■□■□■' +
         '■□■□■□■□' +
         '□■□■□■□■' +
-        '■□■□■□■□'
-        ,
+        '■□■□■□■□' +
+
         '        ' +
         '        ' +
         '        ' +
@@ -85,8 +77,8 @@ let state = {
         '        ' +
         '        ' +
         '        ' +
-        '        '
-        ,
+        '        ' +
+
         '♜♞♝♛♚♝♞♜' +
         '♟♟♟♟♟♟♟♟' +
         '        ' +
@@ -95,11 +87,11 @@ let state = {
         '        ' +
         '♙♙♙♙♙♙♙♙' +
         '♖♘♗♕♔♗♘♖'
-        ,
-    ],
+    ,
     meta: {
         width: 8,
         height: 8,
+        layers: 3,
     },
 }
 
@@ -225,26 +217,34 @@ canvas.addEventListener('mousedown', (event) => {
 // Game Logic ------------------------------------------------------------------
 
 function updateState(x, y) {
-    const i2 = x + (y * state.meta.width);
-    const blank_layer = BLANK_CHAR.repeat(state.meta.width * state.meta.height);
-    const active_layer = state.layers[1];
-    const active_count = strCountChars(active_layer, ACTIVE_CHAR);
-    if (active_count == 0) {
-        state.layers[1] = strReplaceAt(active_layer, i2, ACTIVE_CHAR);
+    const chars = state.tiles.split('');
+    const layer_size = state.meta.width * state.meta.height;
+
+    const i1 = chars.findIndex((c)=>c==ACTIVE_CHAR);
+    const i2 = x + (y * state.meta.width) + (layer_size * 1);
+
+    if (i1 == -1) {
+        console.debug(`set index ${i2} as ACTIVE_CHAR=${ACTIVE_CHAR}`);
+        chars[i2] = ACTIVE_CHAR;
     }
-    if (active_count == 1) {
-        const i1 = [...strDiffIndexs(blank_layer, active_layer)][0];
-        const char = state.layers[2].charAt(i1);
-        state.layers[2] = strReplaceAt(state.layers[2], i1, BLANK_CHAR);
-        state.layers[2] = strReplaceAt(state.layers[2], i2, char);
-        state.layers[1] = blank_layer;
+    else if (i1 == i2) {
+        console.debug(`selected same index ${i1} - set index as BLANK_CHAR=${BLANK_CHAR}`);
+        chars[i1] = BLANK_CHAR;
     }
+    else {
+        console.debug(`set index:${i2 + layer_size} current_char:${chars[i2 + layer_size]} = index:${i1 + layer_size} char:${chars[i1 + layer_size]}`);
+        chars[i2 + layer_size] = chars[i1 + layer_size];
+        chars[i1 + layer_size] = BLANK_CHAR;
+        chars[i1] = BLANK_CHAR;
+        chars[i2] = BLANK_CHAR;
+    }
+    state.tiles = chars.join('');
 }
 
 
 // Display/Rendering -----------------------------------------------------------
 
-function drawTile(x, y, char) {
+function drawTile(char, x, y) {
     x = x * tile_width;
     y = y * tile_height;
     const x_center = x + (tile_width/2);
@@ -286,11 +286,9 @@ function drawTile(x, y, char) {
 }
 
 function drawDisplay() {
-    for (let layer of state.layers) {
-        for (var i=0; i<layer.length; i++) {
-            let [x, y] = [i % state.meta.height, Math.floor(i/state.meta.height)];
-            drawTile(x, y, layer[i]);
-        }
+    const size = [state.meta.width, state.meta.height, state.meta.layers];
+    for (var i=0; i<state.tiles.length; i++) {
+        drawTile(state.tiles[i], ...index_to_coordinate(i, ...size));
     }
 }
 
