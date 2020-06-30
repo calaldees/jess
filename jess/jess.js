@@ -1,12 +1,9 @@
 // QueryString -----------------------------------------------------------------
-function getWebsocketHost() {
-    const urlParams = new URLSearchParams(window.location.search);
-    if (urlParams.has('websocket_host')) {
-        return urlParams.get('WEBSOCKET_HOST');
-    }
-    return `${window.location.hostname}:${window.location.port ? '9800' : window.location.port}`;
-}
-const WEBSOCKET_HOST = getWebsocketHost();
+const urlParams = new URLSearchParams(window.location.search);
+const WEBSOCKET_HOST =
+    urlParams.get('WEBSOCKET_HOST') ||  // query string override
+    // If we have a port specified, then we are probably on a dev/local server, so use separate port for websockets
+    `${window.location.hostname}:${window.location.port ? '9800' : ''}`;
 
 // Utils -----------------------------------------------------------------------
 
