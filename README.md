@@ -14,3 +14,9 @@ Features
 * Auto-join a unique channel
 * Inbuilt chat client
 * Restores state from other clients (if needed)
+
+
+Other Ideas like this
+---------------------
+
+http://www.mattkeeter.com/projects/pont/

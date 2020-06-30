@@ -1,0 +1,3 @@
+[submodule "channelServer"]
+	path = channelServer
+	url = https://github.com/calaldees/channelServer.git
