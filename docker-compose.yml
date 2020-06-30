@@ -1,0 +1,17 @@
+version: '3.7'
+
+services:
+
+    websocket:
+        build:
+            context: ./channelServer/
+            dockerfile: Dockerfile
+
+    nginx:
+        build:
+            context: ./
+            dockerfile: nginx/Dockerfile
+        depends_on:
+            - websocket
+        ports:
+            - "80:80"

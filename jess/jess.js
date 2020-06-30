@@ -1,3 +1,13 @@
+// QueryString -----------------------------------------------------------------
+function getWebsocketHost() {
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.has('websocket_host')) {
+        return urlParams.get('WEBSOCKET_HOST');
+    }
+    return `${window.location.hostname}:${window.location.port ? '9800' : window.location.port}`;
+}
+const WEBSOCKET_HOST = getWebsocketHost();
+
 // Utils -----------------------------------------------------------------------
 
 function index_to_coordinate(i, width, height) {
@@ -120,7 +130,7 @@ new ResizeObserver(resizeCanvas).observe(canvas);
 // Channel name from url#hash or auto-generate
 const channel = window.location.hash.replace('#','');
 if (!channel) {window.location.hash = `#${randomString()}`;}
-const ws_url = `ws://${window.location.hostname}:9800/${channel}.ws`;
+const ws_url = `ws://${WEBSOCKET_HOST}/${channel}.ws`;
 window.addEventListener('hashchange', ()=>{window.location.reload()});
 
 const SOCKET_RECONNECT_INTERVAL_MS = 5000;
