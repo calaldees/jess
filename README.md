@@ -5,6 +5,24 @@ A simple experiment to write an javascript browser based realtime multiplayer ch
 
 Requires a websocket channel echo server
 
+Run
+---
+
+### Local Dev (multiple servers in terminals)
+
+```bash
+    make run_local_server
+    python3 -m webbrowser -t "http://localhost:9800/"
+    make run_local
+    python3 -m webbrowser -t "http://localhost:8080/"
+```
+
+### Production
+
+```bash
+    make run_production
+```
+
 Features
 --------
 
@@ -20,3 +38,4 @@ Other Ideas like this
 ---------------------
 
 http://www.mattkeeter.com/projects/pont/
+
